@@ -10,13 +10,13 @@ import (
 )
 
 var wg sync.WaitGroup
+var failCounter = 0
 
 func main() {
 	t1 := time.Now() // get current time
 
-	wg.Add(2000)
-
-	for i := 1; i <= 2000; i++ {
+	wg.Add(10000)
+	for i := 1; i <= 10000; i++ {
 		go getData(i)
 	}
 
@@ -29,7 +29,7 @@ func main() {
 func getData(num int) {
 	fmt.Printf("任务：%d，开始.......\n", num)
 
-	handler := modbus.NewTCPClientHandler("localhost:509")
+	handler := modbus.NewTCPClientHandler("localhost:503")
 	handler.Timeout = 5 * time.Second
 	handler.SlaveId = 1
 	handler.Logger = log.New(os.Stdout, "Modbus TCP: ", log.LstdFlags)
@@ -49,9 +49,12 @@ func getData(num int) {
 	client := modbus.NewClient(handler)
 
 	//_, err = client.WriteMultipleRegisters(0, 4, []byte{0, 10, 0, 255, 1, 5, 0, 3})
-	//if err != nil {
-	//	fmt.Printf("%v\n", err)
-	//}
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		wg.Done()
+		failCounter++
+		return
+	}
 
 	results, err := client.ReadHoldingRegisters(0, 10)
 	if err != nil {
@@ -59,5 +62,6 @@ func getData(num int) {
 	}
 	fmt.Printf("results %v\n", results)
 	fmt.Printf("任务：%d，结束.......\n\n", num)
+	fmt.Println("Fail Counter: ", failCounter)
 	wg.Done()
 }
